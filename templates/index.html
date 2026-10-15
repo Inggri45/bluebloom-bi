@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BlueBloom | Executive BI Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --navy:#10254a; --blue:#3978f6; --sky:#75c8ff; --ice:#eaf5ff;
+      --lavender:#e8eaff; --pink:#ffd9ec; --mint:#d7fbf0;
+      --bg:#f3f8ff; --card:rgba(255,255,255,.88); --text:#183153;
+      --muted:#7285a3; --line:#e4edf9; --shadow:0 14px 35px rgba(49,103,177,.09);
+    }
+    * { box-sizing:border-box; }
+    body {
+      margin:0; color:var(--text); font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 4% 0%, rgba(117,200,255,.27), transparent 27rem),
+        radial-gradient(circle at 96% 5%, rgba(255,217,236,.42), transparent 24rem),
+        var(--bg);
+    }
+    button, select, input { font:inherit; }
+    .app { max-width:1500px; margin:auto; padding:28px clamp(14px,3vw,38px) 40px; }
+    .topbar { display:flex; justify-content:space-between; align-items:center; gap:18px; flex-wrap:wrap; margin-bottom:25px; }
+    .brand { display:flex; align-items:center; gap:13px; }
+    .logo { width:48px; height:48px; display:grid; place-items:center; border-radius:17px; color:white; font-size:24px;
+      background:linear-gradient(135deg,#3978f6,#79caff); box-shadow:0 8px 20px #7bb8f755; }
+    h1 { margin:0; font-size:clamp(21px,3vw,29px); letter-spacing:-.8px; color:var(--navy); }
+    .sub { color:var(--muted); margin-top:4px; font-size:13px; }
+    .actions { display:flex; gap:9px; align-items:center; flex-wrap:wrap; }
+    .select, .btn { border:1px solid #dce9fa; background:white; border-radius:13px; padding:10px 13px; color:var(--text); box-shadow:0 4px 12px #315a9010; }
+    .btn { cursor:pointer; transition:.2s; font-weight:650; }
+    .btn:hover { transform:translateY(-1px); box-shadow:0 8px 18px #315a9020; }
+    .btn.primary { color:white; border:0; background:linear-gradient(135deg,#3978f6,#67b9ff); }
+    .welcome { position:relative; overflow:hidden; padding:24px 26px; border-radius:25px; margin-bottom:20px;
+      background:linear-gradient(115deg,#1b3d73,#3978f6 62%,#73c8ff); color:white; box-shadow:0 18px 36px #3978f629; }
+    .welcome:after { content:"✦"; position:absolute; right:8%; top:-35px; font-size:160px; opacity:.13; transform:rotate(15deg); }
+    .welcome h2 { margin:0 0 8px; font-size:clamp(19px,2.6vw,27px); letter-spacing:-.5px; }
+    .welcome p { margin:0; color:#e3f3ff; max-width:760px; line-height:1.6; font-size:14px; }
+    .welcome .tag { display:inline-flex; margin-top:14px; background:#ffffff24; border:1px solid #ffffff3d; padding:6px 10px; border-radius:99px; font-size:12px; }
+    .section-title { display:flex; align-items:end; justify-content:space-between; gap:10px; margin:25px 2px 13px; }
+    .section-title h2 { font-size:17px; margin:0; color:var(--navy); }
+    .section-title span { color:var(--muted); font-size:12px; }
+    .grid { display:grid; gap:15px; }
+    .kpis { grid-template-columns:repeat(4,minmax(0,1fr)); }
+    .card { background:var(--card); border:1px solid #ffffff; box-shadow:var(--shadow); border-radius:21px; padding:19px; min-width:0; backdrop-filter:blur(10px); }
+    .kpi { position:relative; overflow:hidden; }
+    .kpi:after { content:""; position:absolute; width:85px; height:85px; right:-22px; bottom:-30px; border-radius:50%; background:var(--bubble,#e4f4ff); }
+    .kpi-top { display:flex; align-items:center; justify-content:space-between; gap:10px; color:var(--muted); font-size:12px; font-weight:700; }
+    .kpi-icon { display:grid; place-items:center; width:37px; height:37px; border-radius:13px; background:var(--bubble,#e4f4ff); font-size:18px; }
+    .kpi-value { font-size:clamp(24px,3vw,32px); font-weight:800; letter-spacing:-1px; margin:13px 0 4px; color:var(--navy); }
+    .kpi-foot { color:var(--muted); font-size:11px; }
+    .two-col { grid-template-columns:minmax(0,1.05fr) minmax(0,1fr); }
+    .three-col { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .card-head { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:15px; }
+    .card-head h3 { margin:0; font-size:15px; color:var(--navy); }
+    .card-head p { margin:5px 0 0; font-size:11px; line-height:1.5; color:var(--muted); }
+    .pill { font-size:10px; padding:6px 9px; border-radius:99px; background:#edf5ff; color:#3978d9; font-weight:750; white-space:nowrap; }
+    .chart-wrap { position:relative; height:260px; }
+    .heatmap { display:grid; gap:5px; overflow-x:auto; }
+    .heat-row { display:grid; grid-template-columns:112px repeat(var(--n), minmax(28px,1fr)); gap:5px; align-items:center; min-width:520px; }
+    .heat-label { color:var(--muted); font-size:10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .heat-cell { height:29px; display:grid; place-items:center; border-radius:7px; font-size:9px; font-weight:750; }
+    .whatif { background:linear-gradient(135deg,#fff,#f4f8ff); }
+    .slider-row { margin:17px 0; }
+    .slider-label { display:flex; justify-content:space-between; align-items:center; font-size:12px; font-weight:700; gap:10px; }
+    .slider-label output { color:#3978f6; background:#eaf3ff; border-radius:8px; padding:5px 8px; min-width:52px; text-align:center; }
+    input[type=range] { width:100%; accent-color:#3978f6; margin:11px 0 0; cursor:pointer; }
+    .prediction { border-radius:18px; padding:18px; background:linear-gradient(120deg,#e8f3ff,#eff0ff); display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .prediction .small { color:#627da5; font-size:11px; }
+    .prediction .score { color:#1b4d9c; font-size:34px; font-weight:850; letter-spacing:-1px; }
+    .grade { display:inline-block; padding:7px 11px; border-radius:99px; background:white; color:#3978f6; font-size:12px; font-weight:800; }
+    .formula { background:#10254a; color:#d8eaff; padding:15px; border-radius:15px; font-size:11px; line-height:1.8; overflow-wrap:anywhere; }
+    .formula strong { color:#8ed8ff; }
+    .breakdown { display:grid; gap:9px; margin-top:13px; }
+    .break-item { display:flex; justify-content:space-between; gap:12px; font-size:11px; color:var(--muted); }
+    .break-item b { color:var(--text); }
+    .toolbar { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+    .search { width:min(100%,280px); padding:10px 13px; border:1px solid #dce9fa; border-radius:12px; background:white; outline:none; color:var(--text); }
+    .table-wrap { overflow:auto; border:1px solid var(--line); border-radius:14px; }
+    table { width:100%; border-collapse:collapse; white-space:nowrap; font-size:11px; }
+    th { background:#eef6ff; color:#56739b; text-align:left; padding:12px 13px; position:sticky; top:0; }
+    td { padding:11px 13px; border-top:1px solid #edf2fa; }
+    tbody tr:hover { background:#f4f9ff; }
+    .score-chip { border-radius:8px; padding:5px 8px; font-weight:800; display:inline-block; }
+    .good { background:#d8f8ee; color:#168365; } .mid { background:#fff0cc; color:#9a6a08; } .low { background:#ffe1e9; color:#bd4163; }
+    .pagination { display:flex; align-items:center; justify-content:space-between; gap:10px; padding-top:13px; color:var(--muted); font-size:11px; }
+    .page-buttons { display:flex; gap:6px; }
+    .page-buttons button { border:1px solid var(--line); border-radius:8px; padding:6px 10px; background:white; cursor:pointer; color:var(--text); }
+    .footer { text-align:center; color:#8ba0bd; font-size:11px; padding:25px 0 0; }
+    .empty { text-align:center; padding:30px; color:var(--muted); font-size:13px; }
+    @media(max-width:1000px) { .kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } .two-col { grid-template-columns:1fr; } .three-col { grid-template-columns:1fr; } }
+    @media(max-width:560px) { .app { padding:16px 12px 25px; } .kpis { gap:10px; } .card { padding:15px; border-radius:17px; } .kpi-value { font-size:25px; } .welcome { padding:21px; } .actions { width:100%; } .select { flex:1; } }
+    @media print { body { background:white; } .actions, .whatif, .toolbar, .pagination, .btn { display:none !important; } .app { max-width:none; padding:0; } .card,.welcome { box-shadow:none; break-inside:avoid; } }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">✿</div>
+      <div><h1>BlueBloom <span style="color:#6dbfff">BI</span></h1><div class="sub">Executive learning insights · Dashboard analitik mahasiswa</div></div>
+    </div>
+    <div class="actions">
+      <select id="genderFilter" class="select" aria-label="Filter gender">
+        <option value="All">Semua gender</option><option value="F">Perempuan (F)</option><option value="M">Laki-laki (M)</option>
+      </select>
+      <button class="btn" onclick="window.print()">⎙ Cetak</button>
+      <button class="btn primary" onclick="exportCSV()">↓ Export CSV</button>
+    </div>
+  </header>
+
+  <section class="welcome">
+    <h2>Halo, data explorer! ✨</h2>
+    <p>Selamat datang di ringkasan performa mahasiswa. Lihat pola belajar, kehadiran, kebiasaan harian, dan hasil ujian dari data yang kamu berikan — semuanya dalam satu dashboard biru yang manis.</p>
+    <span class="tag" id="datasetTag">◌ Memuat dataset latihan1.csv...</span>
+  </section>
+
+  <div class="section-title"><h2>📌 Ringkasan eksekutif</h2><span>Angka diperbarui mengikuti filter gender</span></div>
+  <section class="grid kpis">
+    <div class="card kpi" style="--bubble:#dff0ff"><div class="kpi-top"><span>Rata-rata nilai ujian</span><span class="kpi-icon">🎓</span></div><div class="kpi-value" id="avgScore">—</div><div class="kpi-foot">Dari nilai Exam_Score</div></div>
+    <div class="card kpi" style="--bubble:#e6e8ff"><div class="kpi-top"><span>Rata-rata jam belajar</span><span class="kpi-icon">📚</span></div><div class="kpi-value" id="avgStudy">—</div><div class="kpi-foot">Jam belajar yang dilaporkan</div></div>
+    <div class="card kpi" style="--bubble:#d9fbf1"><div class="kpi-top"><span>Rata-rata kehadiran</span><span class="kpi-icon">🌟</span></div><div class="kpi-value" id="avgAttendance">—</div><div class="kpi-foot">Persentase Attendance</div></div>
+    <div class="card kpi" style="--bubble:#ffe5f1"><div class="kpi-top"><span>Perlu perhatian</span><span class="kpi-icon">🫶</span></div><div class="kpi-value" id="riskCount">—</div><div class="kpi-foot">Mahasiswa dengan nilai di bawah 60</div></div>
+  </section>
+
+  <div class="section-title"><h2>🪄 Prediksi interaktif</h2><span>Ubah slider untuk mencoba skenario</span></div>
+  <section class="grid two-col">
+    <div class="card whatif">
+      <div class="card-head"><div><h3>What-if: coba kebiasaan baru</h3><p>Perkiraan nilai dari model regresi linear yang dilatih pada seluruh dataset.</p></div><span class="pill">LIVE MODEL</span></div>
+      <div class="slider-row"><div class="slider-label"><label for="studySlider">📚 Jam belajar per hari</label><output id="studyOut">10 jam</output></div><input id="studySlider" type="range" min="0" max="24" step="1" value="10"></div>
+      <div class="slider-row"><div class="slider-label"><label for="attendanceSlider">🗓️ Kehadiran</label><output id="attendanceOut">85%</output></div><input id="attendanceSlider" type="range" min="0" max="100" step="1" value="85"></div>
+      <div class="slider-row"><div class="slider-label"><label for="sleepSlider">🌙 Jam tidur</label><output id="sleepOut">7 jam</output></div><input id="sleepSlider" type="range" min="0" max="12" step=".5" value="7"></div>
+      <div class="slider-row"><div class="slider-label"><label for="screenSlider">📱 Waktu layar</label><output id="screenOut">5 jam</output></div><input id="screenSlider" type="range" min="0" max="16" step=".5" value="5"></div>
+      <div class="prediction"><div><div class="small">Estimasi Exam_Score</div><div class="score" id="predScore">—</div><div class="small" id="predNote">Hasil simulasi, bukan jaminan nilai.</div></div><div style="text-align:right"><span class="grade" id="predGrade">—</span><div class="small" style="margin-top:7px">Prediksi model OLS</div></div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div><h3>🔬 Behind the scenes</h3><p>Rumus dan kontribusi tiap faktor pada simulasi yang sedang dipilih.</p></div><span class="pill">OLS</span></div>
+      <div class="formula" id="formula">Model sedang dihitung...</div>
+      <div class="breakdown" id="breakdown"></div>
+      <div style="margin-top:15px;padding:12px;border-radius:13px;background:#f1f7ff;color:#60799b;font-size:11px;line-height:1.6" id="modelNote">R² mengukur seberapa besar variasi nilai dalam dataset yang dijelaskan model. Ini bukan persentase akurasi mutlak.</div>
+    </div>
+  </section>
+
+  <div class="section-title"><h2>📈 Pola & hubungan data</h2><span>Visualisasi dihitung dari dataset</span></div>
+  <section class="grid two-col">
+    <div class="card"><div class="card-head"><div><h3>💙 Profil rata-rata per gender</h3><p>Perbandingan metrik; setiap metrik dinormalisasi ke skala 0–100.</p></div><span class="pill">RADAR</span></div><div class="chart-wrap"><canvas id="radarChart"></canvas></div></div>
+    <div class="card"><div class="card-head"><div><h3>🔗 Faktor yang berhubungan dengan nilai</h3><p>Korelasi terhadap Exam_Score. Nilai mendekati +1 berarti hubungan positif yang kuat.</p></div><span class="pill">CORRELATION</span></div><div class="chart-wrap"><canvas id="corrChart"></canvas></div></div>
+  </section>
+  <section class="grid two-col" style="margin-top:15px">
+    <div class="card"><div class="card-head"><div><h3>🫧 Scatter plot</h3><p>Lihat pola hubungan dua variabel dan sebaran mahasiswa.</p></div><span class="pill">EXPLORE</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><select id="xSelect" class="select" aria-label="Variabel X"></select><select id="ySelect" class="select" aria-label="Variabel Y"></select></div>
+      <div class="chart-wrap"><canvas id="scatterChart"></canvas></div>
+    </div>
+    <div class="card"><div class="card-head"><div><h3>🧊 Peta korelasi</h3><p>Warna biru menunjukkan korelasi positif; merah muda menunjukkan korelasi negatif.</p></div><span class="pill">HEATMAP</span></div><div id="heatmap" class="heatmap"></div></div>
+  </section>
+
+  <div class="section-title"><h2>🧾 Data mahasiswa</h2><span id="tableMeta">Memuat data...</span></div>
+  <section class="card">
+    <div class="toolbar"><input class="search" id="tableSearch" placeholder="⌕ Cari ID, gender, atau nilai..." aria-label="Cari data mahasiswa"><span style="font-size:11px;color:var(--muted)">Tip: klik Export CSV untuk menyimpan data sesuai filter.</span></div>
+    <div class="table-wrap"><table><thead id="tableHead"></thead><tbody id="tableBody"></tbody></table></div>
+    <div class="pagination"><span id="pageInfo">—</span><div class="page-buttons"><button id="prevPage">← Sebelumnya</button><button id="nextPage">Berikutnya →</button></div></div>
+  </section>
+  <div class="footer">Made with ☁️ and a little blue magic · BlueBloom BI Dashboard</div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+let dashboard = null, charts = {}, page = 1, pageSize = 10, filteredRows = [];
+const fmt = (v, digits=1) => Number(v ?? 0).toLocaleString('id-ID',{maximumFractionDigits:digits,minimumFractionDigits:0});
+const pretty = name => ({Student_ID:'ID Mahasiswa',Gender:'Gender',Age:'Usia',Study_Hours:'Jam Belajar',Sleep_Hours:'Jam Tidur',Attendance:'Kehadiran',Exam_Score:'Nilai Ujian',Monthly_Spending:'Pengeluaran/Bulan',Screen_Hours:'Waktu Layar',Satisfaction:'Kepuasan'}[name] || name);
+const palette = ['#3978f6','#75c8ff','#a7a9ff','#ffacd4','#55cbb0','#f7bd68','#6e91d9','#b7d8ff'];
+Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+Chart.defaults.color = '#7185a3';
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+Chart.defaults.plugins.legend.labels.boxWidth = 8;
+
+async function loadDashboard() {
+  const gender = $('genderFilter').value;
+  const response = await fetch('/api/data?gender=' + encodeURIComponent(gender));
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'Gagal memuat data');
+  dashboard = data;
+  $('datasetTag').textContent = `✦ ${data.stats.total_all} baris data asli · ${data.stats.total_students} ditampilkan`;
+  renderKpis(data.stats);
+  renderRadar(data.radar_data);
+  renderCorrelations(data.score_correlations);
+  renderHeatmap(data.corr_matrix);
+  setupSelects(data.numeric_cols);
+  renderScatter();
+  renderTable(data.raw_data);
+  renderPrediction();
+}
+function renderKpis(s) {
+  $('avgScore').textContent = fmt(s.average_score) + ' / 100';
+  $('avgStudy').textContent = fmt(s.average_study) + ' jam';
+  $('avgAttendance').textContent = fmt(s.average_attendance) + '%';
+  $('riskCount').textContent = fmt(s.risk_count,0) + ' orang';
+}
+function destroyChart(id) { if(charts[id]) charts[id].destroy(); }
+function renderRadar(radar) {
+  const keys = ['Study_Hours','Attendance','Sleep_Hours','Exam_Score','Satisfaction'];
+  const maxes = {Study_Hours:24,Attendance:100,Sleep_Hours:12,Exam_Score:100,Satisfaction:10};
+  const labels = keys.map(pretty);
+  const datasets = [
+    {label:'Perempuan (F)',data:keys.map(k=>radar.F[k]/maxes[k]*100),borderColor:'#3978f6',backgroundColor:'#3978f629',pointBackgroundColor:'#3978f6',borderWidth:2},
+    {label:'Laki-laki (M)',data:keys.map(k=>radar.M[k]/maxes[k]*100),borderColor:'#f08fc2',backgroundColor:'#f08fc229',pointBackgroundColor:'#f08fc2',borderWidth:2}
+  ];
+  destroyChart('radar');
+  charts.radar = new Chart($('radarChart'),{type:'radar',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,scales:{r:{min:0,max:100,ticks:{display:false,stepSize:25},grid:{color:'#e7eef9'},angleLines:{color:'#e7eef9'},pointLabels:{font:{size:10}}}},plugins:{legend:{position:'bottom'}}}});
+}
+function renderCorrelations(items) {
+  const list = items.filter(x=>x.name!=='Student_ID').slice(0,8);
+  destroyChart('corr');
+  charts.corr = new Chart($('corrChart'),{type:'bar',data:{labels:list.map(x=>pretty(x.name)),datasets:[{data:list.map(x=>x.value),backgroundColor:list.map(x=>x.value>=0?'#6bb9ff':'#f3a6cb'),borderRadius:7,barThickness:17}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` Korelasi: ${c.raw.toFixed(3)}`}}},scales:{x:{min:-1,max:1,grid:{color:'#edf2fa'},ticks:{font:{size:10}}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
+}
+function renderHeatmap(matrix) {
+  const wrap=$('heatmap'), labels=matrix.labels, values=matrix.values;
+  wrap.style.setProperty('--n',labels.length);
+  let html='<div class="heat-row"><div></div>'+labels.map(l=>`<div class="heat-label" title="${pretty(l)}">${pretty(l).replace('Mahasiswa','Mhs').replace('Pengeluaran/Bulan','Pengeluaran').replace('Kehadiran','Hadir').replace('Jam Belajar','Belajar').replace('Jam Tidur','Tidur').replace('Waktu Layar','Layar').replace('Nilai Ujian','Nilai').replace('Kepuasan','Puas')}</div>`).join('')+'</div>';
+  labels.forEach((label,i)=>{
+    html+=`<div class="heat-row"><div class="heat-label" title="${pretty(label)}">${pretty(label)}</div>`;
+    labels.forEach((_,j)=>{
+      const v=values[i][j]||0;
+      const alpha=Math.abs(v)*0.78+0.08;
+      const color=v>=0?`rgba(57,120,246,${alpha})`:`rgba(240,143,194,${alpha})`;
+      const textColor=Math.abs(v)>.55?'white':'#526783';
+      html+=`<div class="heat-cell" title="${pretty(label)} × ${pretty(labels[j])}: ${v.toFixed(3)}" style="background:${color};color:${textColor}">${v.toFixed(2)}</div>`;
+    });
+    html+='</div>';
+  });
+  wrap.innerHTML=html;
+}
+function setupSelects(cols) {
+  const x=$('xSelect'), y=$('ySelect'), oldX=x.value, oldY=y.value;
+  const options=cols.filter(c=>c!=='Student_ID').map(c=>`<option value="${c}">${pretty(c)}</option>`).join('');
+  if(!x.options.length) x.innerHTML=options;
+  if(!y.options.length) y.innerHTML=options;
+  x.value=cols.includes(oldX)?oldX:'Study_Hours';
+  y.value=cols.includes(oldY)?oldY:'Exam_Score';
+}
+function renderScatter() {
+  if(!dashboard) return;
+  const x=$('xSelect').value, y=$('ySelect').value;
+  const pts=dashboard.raw_data.map(r=>({x:Number(r[x]),y:Number(r[y]),gender:r.Gender,id:r.Student_ID}));
+  destroyChart('scatter');
+  charts.scatter=new Chart($('scatterChart'),{type:'scatter',data:{datasets:[
+    {label:'Perempuan (F)',data:pts.filter(p=>p.gender==='F'),backgroundColor:'#3978f6b8',pointRadius:4},
+    {label:'Laki-laki (M)',data:pts.filter(p=>p.gender==='M'),backgroundColor:'#f08fc2c9',pointRadius:4}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>` ID ${c.raw.id}: (${fmt(c.raw.x)}, ${fmt(c.raw.y)})`}}},scales:{x:{title:{display:true,text:pretty(x)},grid:{color:'#edf2fa'}},y:{title:{display:true,text:pretty(y)},grid:{color:'#edf2fa'}}}}});
+}
+function renderPrediction() {
+  if(!dashboard) return;
+  const m=dashboard.model;
+  const vals={Study_Hours:Number($('studySlider').value),Attendance:Number($('attendanceSlider').value),Sleep_Hours:Number($('sleepSlider').value),Screen_Hours:Number($('screenSlider').value)};
+  $('studyOut').textContent=vals.Study_Hours+' jam'; $('attendanceOut').textContent=vals.Attendance+'%';
+  $('sleepOut').textContent=fmt(vals.Sleep_Hours,1)+' jam'; $('screenOut').textContent=fmt(vals.Screen_Hours,1)+' jam';
+  const parts=Object.entries(vals).map(([key,value])=>({key,value,contribution:m.coefficients[key]*value}));
+  const raw=m.intercept+parts.reduce((sum,p)=>sum+p.contribution,0);
+  const score=Math.max(0,Math.min(100,raw));
+  $('predScore').textContent=fmt(score,1);
+  let grade=score>=85?'Sangat baik ✨':score>=75?'Baik 💙':score>=60?'Cukup 🌤️':'Perlu dukungan 🌱';
+  $('predGrade').textContent=grade;
+  $('formula').innerHTML=`<strong>Exam_Score</strong> = ${m.intercept.toFixed(2)} ${parts.map(p=>`${p.contribution<0?'−':'+'} ${Math.abs(m.coefficients[p.key]).toFixed(3)} × ${p.key}`).join(' ')}<br><br><strong>R²</strong> = ${(m.r2*100).toFixed(1)}% &nbsp; · &nbsp; <strong>RMSE</strong> = ${m.rmse.toFixed(2)}`;
+  $('breakdown').innerHTML=`<div class="break-item"><span>Konstanta (intercept)</span><b>${fmt(m.intercept,2)}</b></div>`+
+    parts.map(p=>`<div class="break-item"><span>${pretty(p.key)} (${fmt(p.value,1)})</span><b>${p.contribution>=0?'+':''}${fmt(p.contribution,2)}</b></div>`).join('')+
+    `<div class="break-item" style="padding-top:9px;border-top:1px solid #e5edf8"><span>Hasil sebelum dibatasi 0–100</span><b>${fmt(raw,2)}</b></div>`;
+  $('modelNote').textContent=`Model dilatih dengan ${dashboard.stats.total_all} baris data. R² ${(m.r2*100).toFixed(1)}% dan RMSE ${m.rmse.toFixed(2)} pada data pelatihan. Prediksi bersifat perkiraan dan hubungan statistik tidak membuktikan sebab-akibat.`;
+}
+function renderTable(rows) {
+  const query=$('tableSearch').value.trim().toLowerCase();
+  filteredRows=rows.filter(r=>Object.values(r).some(v=>String(v).toLowerCase().includes(query)));
+  const pages=Math.max(1,Math.ceil(filteredRows.length/pageSize)); page=Math.min(page,pages);
+  const columns=['Student_ID','Gender','Age','Study_Hours','Sleep_Hours','Attendance','Exam_Score','Monthly_Spending','Screen_Hours','Satisfaction'];
+  $('tableHead').innerHTML='<tr>'+columns.map(c=>`<th>${pretty(c)}</th>`).join('')+'</tr>';
+  const current=filteredRows.slice((page-1)*pageSize,page*pageSize);
+  $('tableBody').innerHTML=current.length?current.map(r=>'<tr>'+columns.map(c=>{
+    if(c==='Exam_Score'){const n=Number(r[c]);return `<td><span class="score-chip ${n>=75?'good':n>=60?'mid':'low'}">${fmt(n,0)}</span></td>`;}
+    if(c==='Gender') return `<td>${r[c]==='F'?'♀ Perempuan':'♂ Laki-laki'}</td>`;
+    return `<td>${fmt(r[c], c.includes('Hours')?1:0)}</td>`;
+  }).join('')+'</tr>').join(''):'<tr><td colspan="10" class="empty">Tidak ada data yang cocok 💭</td></tr>';
+  $('tableMeta').textContent=`${filteredRows.length} baris sesuai filter`;
+  $('pageInfo').textContent=`Halaman ${page} dari ${pages} · ${filteredRows.length} baris`;
+  $('prevPage').disabled=page<=1; $('nextPage').disabled=page>=pages;
+}
+function exportCSV() {
+  if(!dashboard) return;
+  const rows=dashboard.raw_data;
+  if(!rows.length) return;
+  const cols=Object.keys(rows[0]);
+  const csv=[cols.join(','),...rows.map(r=>cols.map(c=>{const v=String(r[c]??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}).join(','))].join('\r\n');
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob), a=document.createElement('a'); a.href=url; a.download='bluebloom_data_filtered.csv'; a.click(); URL.revokeObjectURL(url);
+}
+$('genderFilter').addEventListener('change',()=>{page=1;loadDashboard().catch(showError);});
+$('xSelect').addEventListener('change',renderScatter); $('ySelect').addEventListener('change',renderScatter);
+$('tableSearch').addEventListener('input',()=>{page=1;renderTable(dashboard?.raw_data||[]);});
+$('prevPage').addEventListener('click',()=>{if(page>1){page--;renderTable(dashboard.raw_data);}});
+$('nextPage').addEventListener('click',()=>{if(page<Math.ceil(filteredRows.length/pageSize)){page++;renderTable(dashboard.raw_data);}});
+['studySlider','attendanceSlider','sleepSlider','screenSlider'].forEach(id=>$(id).addEventListener('input',renderPrediction));
+function showError(err){document.querySelector('.welcome p').textContent='Data belum berhasil dimuat: '+err.message+' Pastikan file latihan1.csv berada satu folder dengan app.py dan kolomnya sesuai.';$('datasetTag').textContent='⚠ Periksa dataset';}
+loadDashboard().catch(showError);
+</script>
+</body>
+</html>
